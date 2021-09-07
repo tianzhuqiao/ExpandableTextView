@@ -198,7 +198,11 @@ extension ExpandableTextView {
 
     private func commonInit() {
         self.delegate = self
+        isScrollEnabled = false
+        dataDetectorTypes = .all
         isUserInteractionEnabled = true
+        isSelectable = true
+        isEditable = false
         self.textContainer.lineBreakMode = .byClipping
         self.lessText = "Less"
         self.moreText = "More"
