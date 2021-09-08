@@ -5,13 +5,42 @@ typealias LineIndexTuple = (line: CTLine, index: Int)
  * The delegate of ExpandableTextView.
  */
 public protocol ExpandableTextViewDelegate: NSObjectProtocol {
+    /**
+     * Called when to expand the text.
+     * - parameter textView: The ExpandableTextView for which the delegate call was issued.
+     */
     func willExpandTextView(_ textView: ExpandableTextView)
+    /**
+     * Called after expanding the text.
+     * - parameter textView: The ExpandableTextView for which the delegate call was issued.
+     */
     func didExpandTextView(_ textView: ExpandableTextView)
+    /**
+     * Called when to collapse the text.
+     * - parameter textView: The ExpandableTextView for which the delegate call was issued.
+     */
     func willCollapseTextView(_ textView: ExpandableTextView)
+    /**
+     * Called after collapsing the text.
+     * - parameter textView: The ExpandableTextView for which the delegate call was issued.
+     */
     func didCollapseTextView(_ textView: ExpandableTextView)
 
+    /**
+     * Asks the delegate whether the specified text view allows the specified type of user interaction with the specified URL in the specified range of text.
+     * - parameter textView: The ExpandableTextView for which the delegate call was issued.
+     * -                       URL: The URL to be processed
+     * -                       characterRange: The character range containing the URL.
+     * -                       interaction: The type of interaction that is occurring
+     * - returns     true if interaction with the URL should be allowed; false if interaction should not be allowed.
+     */
     func expandableTextView(_ textView: ExpandableTextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool
-    func expandableTextView(_ textView: ExpandableTextView, shallUpdateHeight: Bool)
+
+    /**
+     * Called if the height is changed after setting the text (without collapse/expand status change).
+     * - parameter textView: The ExpandableTextView for which the delegate call was issued.
+     */
+    func expandableTextViewUpdateHeight(_ textView: ExpandableTextView)
 }
 
 public extension ExpandableTextViewDelegate {
@@ -23,7 +52,7 @@ public extension ExpandableTextViewDelegate {
     func expandableTextView(_ textView: ExpandableTextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
         return true
     }
-    func expandableTextView(_ textView: ExpandableTextView, shallUpdateHeight: Bool) {}
+    func expandableTextViewUpdateHeight(_ textView: ExpandableTextView) {}
 }
 
 /**
@@ -70,6 +99,9 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
             less.addAttribute(NSAttributedString.Key.link, value: "flytask://less", range: linkRange)
             less.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: linkRange)
             expandedAttributedLink = less
+            if let font = font {
+                self.expandedAttributedLink = expandedAttributedLink.copyWithAddedFontAttribute(font)
+            }
         }
     }
 
@@ -80,6 +112,9 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
             more.addAttribute(NSAttributedString.Key.link, value: "flytask://more", range: linkRange)
             more.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: linkRange)
             collapsedAttributedLink = more
+            if let font = font {
+                self.collapsedAttributedLink = collapsedAttributedLink.copyWithAddedFontAttribute(font)
+            }
         }
     }
     /// Set the link name (and attributes) that is shown when collapsed.
@@ -127,8 +162,8 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
                     let size = self.bounds.size
                     self.attributedText = NSAttributedString(string: text)
                     let newSize = self.sizeThatFits(CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude))
-                    if size.height != newSize.height {
-                        self.delegateExppanable?.expandableTextView(self, shallUpdateHeight: true)
+                    if abs(size.height - newSize.height) > 1 {
+                        self.delegateExppanable?.expandableTextViewUpdateHeight(self)
                     }
                 }
             } else {
@@ -141,8 +176,11 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     }
 
     private func updateText() {
-        if let attributedText = fullAttributedText?.copyWithAddedFontAttribute(font!).copyWithParagraphAttribute(font!),
-            attributedText.length > 0 {
+        var attributedText = fullAttributedText
+        if let font = self.font {
+             attributedText = fullAttributedText?.copyWithAddedFontAttribute(font).copyWithParagraphAttribute(font)
+        }
+        if let attributedText = attributedText, attributedText.length > 0 {
             self.collapsedText = getCollapsedText(for: attributedText, link: (linkHighlighted) ? collapsedAttributedLink.copyWithHighlightedColor() : self.collapsedAttributedLink)
             self.expandedText = getExpandedText(for: attributedText, link: (linkHighlighted) ? expandedAttributedLink?.copyWithHighlightedColor() : self.expandedAttributedLink)
             super.attributedText = (self.collapsed) ? self.collapsedText : self.expandedText
@@ -208,17 +246,21 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
 extension ExpandableTextView {
 
     private func commonInit() {
-        self.delegate = self
+        delegate = self
         isScrollEnabled = false
         dataDetectorTypes = .all
         isUserInteractionEnabled = true
         isSelectable = true
         isEditable = false
-        self.textContainer.lineBreakMode = .byClipping
-        self.lessText = "Less"
-        self.moreText = "More"
+        textAlignment = .left
+        textContainerInset = .zero
+        textContainer.lineFragmentPadding = 0
+        textContainer.lineBreakMode = .byClipping
+        lessText = "Less"
+        moreText = "More"
         collapsedNumberOfLines = numberOfLines
         ellipsis = NSAttributedString(string: "...")
+        font = .systemFont(ofSize: 16)
     }
 
     private func textReplaceWordWithLink(_ lineIndex: LineIndexTuple, text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
@@ -324,14 +366,8 @@ extension ExpandableTextView {
     }
 
     private func findLineWithWords(lastLine: CTLine, text: NSAttributedString, lines: [CTLine]) -> LineIndexTuple {
-        var lastLineRef = lastLine
-        var lastLineIndex = collapsedNumberOfLines - 1
-        var lineWords = spiltIntoWords(str: text.text(for: lastLineRef).string as NSString)
-        while false {//lineWords.count < 2 && lastLineIndex > 0 {
-            lastLineIndex -=  1
-            lastLineRef = lines[lastLineIndex] as CTLine
-            lineWords = spiltIntoWords(str: text.text(for: lastLineRef).string as NSString)
-        }
+        let lastLineRef = lastLine
+        let lastLineIndex = collapsedNumberOfLines - 1
         return (lastLineRef, lastLineIndex)
     }
 
@@ -357,7 +393,6 @@ extension ExpandableTextView {
 }
 
 // MARK: Convenience Methods
-
 private extension NSAttributedString {
     func hasFontAttribute() -> Bool {
         guard !self.string.isEmpty else { return false }

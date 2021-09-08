@@ -83,18 +83,11 @@ class ExpandableTextViewTableCell: UITableViewCell, ExpandableTextViewDelegate {
 
     lazy var notesTextView : ExpandableTextView = {
         let v = ExpandableTextView()
-        v.translatesAutoresizingMaskIntoConstraints = false
         v.font = UIFont(name: "HelveticaNeue", size: 16)
         v.textColor = UIColor(red:0x22/255, green: 0x22/255, blue: 0x22/255, alpha: 1)
-        v.textAlignment = .left
-        v.isScrollEnabled = false
-        v.dataDetectorTypes = .all
-        v.isUserInteractionEnabled = true
-        v.isSelectable = true
-        v.isEditable = false
         v.backgroundColor = .clear
-        v.textContainerInset = .zero
-        v.textContainer.lineFragmentPadding = 0
+        v.moreText = "Read More"
+        v.lessText = "Read Less"
         v.delegateExppanable = self
         v.numberOfLines = 3
         return v
@@ -117,7 +110,7 @@ class ExpandableTextViewTableCell: UITableViewCell, ExpandableTextViewDelegate {
         updateCell()
     }
 
-    func expandableTextView(_ textView: ExpandableTextView, shallUpdateHeight: Bool) {
+    func expandableTextViewUpdateHeight(_ textView: ExpandableTextView) {
         updateCell()
     }
 }
