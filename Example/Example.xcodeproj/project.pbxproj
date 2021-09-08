@@ -15,8 +15,8 @@
 		BECE335126E833F000F56C9C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = BECE334F26E833F000F56C9C /* LaunchScreen.storyboard */; };
 		BECE335C26E833F000F56C9C /* ExampleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECE335B26E833F000F56C9C /* ExampleTests.swift */; };
 		BECE336726E833F100F56C9C /* ExampleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECE336626E833F100F56C9C /* ExampleUITests.swift */; };
-		BECE337B26E8398A00F56C9C /* ExpandableTextView.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BECE337926E834BD00F56C9C /* ExpandableTextView.framework */; };
-		BECE337C26E8398A00F56C9C /* ExpandableTextView.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BECE337926E834BD00F56C9C /* ExpandableTextView.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		BECE338926E9507F00F56C9C /* ExpandableTextView.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BECE337926E834BD00F56C9C /* ExpandableTextView.framework */; };
+		BECE338A26E9507F00F56C9C /* ExpandableTextView.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BECE337926E834BD00F56C9C /* ExpandableTextView.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,16 +41,23 @@
 			remoteGlobalIDString = BECE332826E7EDEF00F56C9C;
 			remoteInfo = ExpandableTextView;
 		};
+		BECE338726E9507500F56C9C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BECE337426E834BD00F56C9C /* ExpandableTextView.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = "ExpandableTextView::ExpandableTextViewTests::Product";
+			remoteInfo = ExpandableTextViewTests;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		BECE337D26E8398A00F56C9C /* Embed Frameworks */ = {
+		BECE338B26E9507F00F56C9C /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				BECE337C26E8398A00F56C9C /* ExpandableTextView.framework in Embed Frameworks */,
+				BECE338A26E9507F00F56C9C /* ExpandableTextView.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -80,7 +87,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				BECE337B26E8398A00F56C9C /* ExpandableTextView.framework in Frameworks */,
+				BECE338926E9507F00F56C9C /* ExpandableTextView.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -159,6 +166,7 @@
 			isa = PBXGroup;
 			children = (
 				BECE337926E834BD00F56C9C /* ExpandableTextView.framework */,
+				BECE338826E9507500F56C9C /* ExpandableTextViewTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -180,7 +188,7 @@
 				BECE333D26E833E800F56C9C /* Sources */,
 				BECE333E26E833E800F56C9C /* Frameworks */,
 				BECE333F26E833E800F56C9C /* Resources */,
-				BECE337D26E8398A00F56C9C /* Embed Frameworks */,
+				BECE338B26E9507F00F56C9C /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -281,6 +289,13 @@
 			fileType = wrapper.framework;
 			path = ExpandableTextView.framework;
 			remoteRef = BECE337826E834BD00F56C9C /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		BECE338826E9507500F56C9C /* ExpandableTextViewTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = file;
+			path = ExpandableTextViewTests.xctest;
+			remoteRef = BECE338726E9507500F56C9C /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
