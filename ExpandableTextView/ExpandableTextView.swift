@@ -111,11 +111,13 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     open override var text: String? {
         set(text) {
             if let text = text {
-                let size = self.bounds.size
-                self.attributedText = NSAttributedString(string: text)
-                let newSize = self.sizeThatFits(CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude))
-                if size.height != newSize.height {
-                    delegateExppanable?.expandableTextView(self, shallUpdateHeight: true)
+                DispatchQueue.main.async {
+                    let size = self.bounds.size
+                    self.attributedText = NSAttributedString(string: text)
+                    let newSize = self.sizeThatFits(CGSize(width: size.width, height: CGFloat.greatestFiniteMagnitude))
+                    if size.height != newSize.height {
+                        self.delegateExppanable?.expandableTextView(self, shallUpdateHeight: true)
+                    }
                 }
             } else {
                 self.attributedText = nil
@@ -174,23 +176,20 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     }
 
     open override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            // location of the tap
-            var location = point
-            location.x -= self.textContainerInset.left
-            location.y -= self.textContainerInset.top
+        let glyphIndex = self.layoutManager.glyphIndex(for: point, in: self.textContainer)
 
-            // find the character that's been tapped
-            let characterIndex = self.layoutManager.characterIndex(for: location, in: self.textContainer, fractionOfDistanceBetweenInsertionPoints: nil)
-            if characterIndex < self.textStorage.length {
-                // if the character is a link, handle the tap as UITextView normally would
-                if (self.textStorage.attribute(NSAttributedString.Key.link, at: characterIndex, effectiveRange: nil) != nil) {
-                    return self
-                }
-            }
+        //Ensure the glyphIndex actually matches the point and isn't just the closest glyph to the point
+        let glyphRect = self.layoutManager.boundingRect(forGlyphRange: NSRange(location: glyphIndex, length: 1), in: self.textContainer)
 
-            // otherwise return nil so the tap goes on to the next receiver
+        if glyphIndex < self.textStorage.length,
+           glyphRect.contains(point),
+           self.textStorage.attribute(NSAttributedString.Key.link, at: glyphIndex, effectiveRange: nil) != nil {
+
+            return self
+        } else {
             return nil
         }
+    }
 }
 
 // MARK: Privates
