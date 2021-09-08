@@ -108,23 +108,13 @@ class ExpandableTextViewTableCell: UITableViewCell, ExpandableTextViewDelegate {
             }
         }
     }
-    func willExpandTextView(_ textView: ExpandableTextView) {
-    }
 
     func didExpandTextView(_ textView: ExpandableTextView) {
         updateCell()
     }
 
-    func willCollapseTextView(_ textView: ExpandableTextView) {
-
-    }
-
     func didCollapseTextView(_ textView: ExpandableTextView) {
         updateCell()
-    }
-
-    func expandableTextView(_ textView: ExpandableTextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
-        return true
     }
 
     func expandableTextView(_ textView: ExpandableTextView, shallUpdateHeight: Bool) {

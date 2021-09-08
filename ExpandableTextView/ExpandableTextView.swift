@@ -14,6 +14,18 @@ public protocol ExpandableTextViewDelegate: NSObjectProtocol {
     func expandableTextView(_ textView: ExpandableTextView, shallUpdateHeight: Bool)
 }
 
+public extension ExpandableTextViewDelegate {
+    func willExpandTextView(_ textView: ExpandableTextView) {}
+    func didExpandTextView(_ textView: ExpandableTextView) {}
+    func willCollapseTextView(_ textView: ExpandableTextView) {}
+    func didCollapseTextView(_ textView: ExpandableTextView) {}
+
+    func expandableTextView(_ textView: ExpandableTextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
+        return true
+    }
+    func expandableTextView(_ textView: ExpandableTextView, shallUpdateHeight: Bool) {}
+}
+
 /**
  * ExpandableTextView
  */
