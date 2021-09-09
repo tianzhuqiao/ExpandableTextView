@@ -1,6 +1,5 @@
 import UIKit
 
-typealias LineIndexTuple = (line: CTLine, index: Int)
 /**
  * The delegate of ExpandableTextView.
  */
@@ -63,6 +62,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
         case character
         case word
     }
+    typealias LineIndexTuple = (line: CTLine, index: Int)
 
     /// The delegate of ExpandableTextView
     weak open var delegateExppanable: ExpandableTextViewDelegate?
@@ -74,76 +74,117 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
         }
     }
 
-    /// Set 'true' if the label can be expanded or 'false' if not.
-    /// The default value is 'true'.
-    @IBInspectable open var shouldExpand: Bool = true
-
-    /// Set 'true' if the label can be collapsed or 'false' if not.
-    /// The default value is 'false'.
-    @IBInspectable open var shouldCollapse: Bool = false
-
     open override var font: UIFont? {
         didSet {
             if let font = font {
-                self.collapsedAttributedLink = collapsedAttributedLink.copyWithAddedFontAttribute(font)
-                self.expandedAttributedLink = expandedAttributedLink.copyWithAddedFontAttribute(font)
-                self.ellipsis = ellipsis.copyWithAddedFontAttribute(font)
+                _collapsedAttributedLink = _collapsedAttributedLink.copyWithAddedFontAttribute(font)
+                _expandedAttributedLink = _expandedAttributedLink?.copyWithAddedFontAttribute(font)
+                _ellipsis = _ellipsis?.copyWithAddedFontAttribute(font)
             }
         }
     }
 
-    open var lessText: String = "Less" {
+    open var lessText: String? = "Less" {
         didSet {
-            let less = NSMutableAttributedString(string: lessText)
-            let linkRange = less.mutableString.range(of: lessText)
-            less.addAttribute(NSAttributedString.Key.link, value: "flytask://less", range: linkRange)
-            less.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: linkRange)
-            expandedAttributedLink = less
-            if let font = font {
-                self.expandedAttributedLink = expandedAttributedLink.copyWithAddedFontAttribute(font)
+            if let lessText = lessText, !lessText.isEmpty {
+                let less = NSMutableAttributedString(string: lessText)
+                expandedAttributedLink = less
+
+            } else {
+                expandedAttributedLink = nil
             }
         }
     }
 
     open var moreText: String = "More" {
         didSet {
-            let more = NSMutableAttributedString(string: moreText)
-            let linkRange = more.mutableString.range(of: moreText)
-            more.addAttribute(NSAttributedString.Key.link, value: "flytask://more", range: linkRange)
-            more.addAttribute(NSAttributedString.Key.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: linkRange)
+            var moreStr = moreText
+            if moreStr.isEmpty {
+                moreStr = "More"
+            }
+            let more = NSMutableAttributedString(string: moreStr)
             collapsedAttributedLink = more
-            if let font = font {
-                self.collapsedAttributedLink = collapsedAttributedLink.copyWithAddedFontAttribute(font)
+        }
+    }
+
+    open var ellipsisText: String? = "..." {
+        didSet {
+            if let ellipsisText = ellipsisText, !ellipsisText.isEmpty {
+                ellipsis = NSMutableAttributedString(string: ellipsisText)
+
+            } else {
+                ellipsis = nil
             }
         }
     }
+
     /// Set the link name (and attributes) that is shown when collapsed.
-    /// The default value is "More". Cannot be nil.
-    open var collapsedAttributedLink: NSAttributedString!
+    /// The default value is "More".
+    open var collapsedAttributedLink: NSAttributedString {
+        set(value) {
+            let more = NSMutableAttributedString(attributedString: value)
+            let range = NSRange(location: 0, length: more.length)
+            more.removeAttribute(.link, range: range)
+            more.addAttribute(.link, value: "etv://more", range: range)
+            _collapsedAttributedLink = more
+            if let font = font {
+                _collapsedAttributedLink = _collapsedAttributedLink.copyWithAddedFontAttribute(font)
+            }
+        }
+        get {
+            return _collapsedAttributedLink
+        }
+    }
+    private var _collapsedAttributedLink: NSAttributedString!
+
     
     /// Set the link name (and attributes) that is shown when expanded.
-    /// The default value is "Less". Can be nil.
-    open var expandedAttributedLink: NSAttributedString!
+    /// The default value is "Less".
+    open var expandedAttributedLink: NSAttributedString? {
+        set(value) {
+            if let value = value {
+                let less = NSMutableAttributedString(attributedString: value)
+                let range = NSRange(location: 0, length: less.length)
+                less.removeAttribute(.link, range: range)
+                less.addAttribute(.link, value: "etv://less", range: range)
+                _expandedAttributedLink = less
+                if let font = font {
+                    _expandedAttributedLink = _expandedAttributedLink?.copyWithAddedFontAttribute(font)
+                }
+            } else {
+                _expandedAttributedLink = nil
+            }
+        }
+        get {
+            return _expandedAttributedLink
+        }
+    }
+    private var _expandedAttributedLink: NSAttributedString?
 
     /// Set the ellipsis that appears just after the text and before the link.
-    /// The default value is "...". Can be nil.
-    open var ellipsis: NSAttributedString!
+    /// The default value is "...".
+    open var ellipsis: NSAttributedString? {
+        set(value) {
+            if let value = value {
+                _ellipsis = value
+                if let font = font {
+                    _ellipsis = _ellipsis?.copyWithAddedFontAttribute(font)
+                }
+            } else {
+                _ellipsis = nil
+            }
+        }
+        get {
+            return _ellipsis
+        }
+    }
+    private var _ellipsis: NSAttributedString?
 
     open var textReplacementType: TextReplacementType = .word
 
     private var collapsedText: NSAttributedString?
-    private var linkHighlighted: Bool = false
-    private var linkRect: CGRect?
-    private var collapsedNumberOfLines: NSInteger = 0
-    private var expandedLinkPosition: NSTextAlignment?
-    private var collapsedLinkTextRange: NSRange?
-    private var expandedLinkTextRange: NSRange?
 
-    open var numberOfLines: Int = 0 {
-        didSet {
-            collapsedNumberOfLines = numberOfLines
-        }
-    }
+    open var numberOfLines: Int = 0
 
     public required init?(coder aDecoder: NSCoder) {
         super.init(coder: aDecoder)
@@ -181,8 +222,8 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
              attributedText = fullAttributedText?.copyWithAddedFontAttribute(font).copyWithParagraphAttribute(font)
         }
         if let attributedText = attributedText, attributedText.length > 0 {
-            self.collapsedText = getCollapsedText(for: attributedText, link: (linkHighlighted) ? collapsedAttributedLink.copyWithHighlightedColor() : self.collapsedAttributedLink)
-            self.expandedText = getExpandedText(for: attributedText, link: (linkHighlighted) ? expandedAttributedLink?.copyWithHighlightedColor() : self.expandedAttributedLink)
+            self.collapsedText = getCollapsedText(for: attributedText, link: self.collapsedAttributedLink)
+            self.expandedText = getExpandedText(for: attributedText, link: self.expandedAttributedLink)
             super.attributedText = (self.collapsed) ? self.collapsedText : self.expandedText
         } else {
             self.expandedText = nil
@@ -193,7 +234,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
 
     open override func layoutSubviews() {
         super.layoutSubviews()
-        // update the text based on the width
+        // update the text based on the textview width
         updateText()
     }
     open private(set) var expandedText: NSAttributedString?
@@ -210,17 +251,18 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     }
 
     public func textView(_ textView: UITextView, shouldInteractWith URL: URL, in characterRange: NSRange, interaction: UITextItemInteraction) -> Bool {
-        if URL.scheme == "flytask" {
-            if URL.absoluteString == "flytask://less" {
+        if URL.scheme == "etv" {
+            if URL.absoluteString == "etv://less" {
                 delegateExppanable?.willCollapseTextView(self)
                 collapsed = true
                 delegateExppanable?.didCollapseTextView(self)
-            } else {
+                return false
+            } else if URL.absoluteString == "etv://more"  {
                 delegateExppanable?.willExpandTextView(self)
                 collapsed = false
                 delegateExppanable?.didExpandTextView(self)
+                return false
             }
-            return false
         }
         return delegateExppanable?.expandableTextView(self, shouldInteractWith: URL, in: characterRange, interaction: interaction) ?? true
     }
@@ -230,7 +272,6 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
 
         //Ensure the glyphIndex actually matches the point and isn't just the closest glyph to the point
         let glyphRect = self.layoutManager.boundingRect(forGlyphRange: NSRange(location: glyphIndex, length: 1), in: self.textContainer)
-
         if glyphIndex < self.textStorage.length,
            glyphRect.contains(point),
            self.textStorage.attribute(NSAttributedString.Key.link, at: glyphIndex, effectiveRange: nil) != nil {
@@ -258,8 +299,7 @@ extension ExpandableTextView {
         textContainer.lineBreakMode = .byClipping
         lessText = "Less"
         moreText = "More"
-        collapsedNumberOfLines = numberOfLines
-        ellipsis = NSAttributedString(string: "...")
+        ellipsisText = "..."
         font = .systemFont(ofSize: 16)
     }
 
@@ -279,10 +319,6 @@ extension ExpandableTextView {
             let fits = self.textFitsWidth(lineTextWithAddedLink)
             if fits {
                 lineTextWithLink = lineTextWithAddedLink
-                let lineTextWithLastWordRemovedRect = lineTextWithLastWordRemoved.boundingRect(for: self.frame.size.width)
-                let wordRect = linkName.boundingRect(for: self.frame.size.width)
-                let width = lineTextWithLastWordRemoved.string == "" ? self.frame.width : wordRect.size.width
-                self.linkRect = CGRect(x: lineTextWithLastWordRemovedRect.size.width, y: self.font!.lineHeight * CGFloat(lineIndex.index), width: width, height: wordRect.size.height)
                 stop.pointee = true
             }
         }
@@ -317,13 +353,20 @@ extension ExpandableTextView {
 
     private func getExpandedText(for text: NSAttributedString?, link: NSAttributedString?) -> NSAttributedString? {
         guard let text = text else { return nil }
-        let expandedText = NSMutableAttributedString()
+        var expandedText = NSMutableAttributedString()
         expandedText.append(text)
-        if let link = link, textWillBeTruncated(expandedText) {
-            let spaceOrNewLine = expandedLinkPosition == nil ? "  " : "\n"
-            expandedText.append(NSAttributedString(string: "\(spaceOrNewLine)"))
+        if let link = link, link.length > 0 && textWillBeTruncated(expandedText) {
+            // first try to add the les link in the same line
+            let rect = expandedText.boundingRect(for: self.bounds.width)
+            expandedText.append(NSAttributedString(string: "  "))
             expandedText.append(NSMutableAttributedString(string: "\(link.string)", attributes: link.attributes(at: 0, effectiveRange: nil)).copyWithAddedFontAttribute(font!))
-            expandedLinkTextRange = NSMakeRange(expandedText.length - link.length, link.length)
+            if abs(rect.height - expandedText.boundingRect(for: self.bounds.width).height) > 1 {
+                // if the less linke crosses multiple lines, then put it in a new line
+                expandedText = NSMutableAttributedString()
+                expandedText.append(text)
+                expandedText.append(NSAttributedString(string: "\n"))
+                expandedText.append(NSMutableAttributedString(string: "\(link.string)", attributes: link.attributes(at: 0, effectiveRange: nil)).copyWithAddedFontAttribute(font!))
+            }
         }
 
         return expandedText
@@ -332,8 +375,8 @@ extension ExpandableTextView {
     private func getCollapsedText(for text: NSAttributedString?, link: NSAttributedString) -> NSAttributedString? {
         guard let text = text else { return nil }
         let lines = text.lines(for: frame.size.width)
-        if collapsedNumberOfLines > 0 && collapsedNumberOfLines < lines.count {
-            let lastLineRef = lines[collapsedNumberOfLines-1] as CTLine
+        if numberOfLines > 0 && numberOfLines < lines.count {
+            let lastLineRef = lines[numberOfLines-1] as CTLine
             var lineIndex: LineIndexTuple?
             var modifiedLastLineText: NSAttributedString?
 
@@ -343,7 +386,7 @@ extension ExpandableTextView {
                     modifiedLastLineText = textReplaceWordWithLink(lineIndex, text: text, linkName: link)
                 }
             } else {
-                lineIndex = (lastLineRef, collapsedNumberOfLines - 1)
+                lineIndex = (lastLineRef, numberOfLines - 1)
                 if let lineIndex = lineIndex {
                     modifiedLastLineText = textReplaceWithLink(lineIndex, text: text, linkName: link)
                 }
@@ -356,7 +399,6 @@ extension ExpandableTextView {
                 }
                 collapsedLines.append(modifiedLastLineText)
 
-                collapsedLinkTextRange = NSRange(location: collapsedLines.length - link.length, length: link.length)
                 return collapsedLines
             } else {
                 return nil
@@ -367,19 +409,8 @@ extension ExpandableTextView {
 
     private func findLineWithWords(lastLine: CTLine, text: NSAttributedString, lines: [CTLine]) -> LineIndexTuple {
         let lastLineRef = lastLine
-        let lastLineIndex = collapsedNumberOfLines - 1
+        let lastLineIndex = numberOfLines - 1
         return (lastLineRef, lastLineIndex)
-    }
-
-    private func spiltIntoWords(str: NSString) -> [String] {
-        var strings: [String] = []
-        str.enumerateSubstrings(in: NSRange(location: 0, length: str.length), options: [.byWords, .reverse]) { (word, subRange, enclosingRange, stop) -> Void in
-            if let unwrappedWord = word {
-                strings.append(unwrappedWord)
-            }
-            if strings.count > 1 { stop.pointee = true }
-        }
-        return strings
     }
 
     private func textFitsWidth(_ text: NSAttributedString) -> Bool {
@@ -388,7 +419,7 @@ extension ExpandableTextView {
 
     private func textWillBeTruncated(_ text: NSAttributedString) -> Bool {
         let lines = text.lines(for: frame.size.width)
-        return collapsedNumberOfLines > 0 && collapsedNumberOfLines < lines.count
+        return numberOfLines > 0 && numberOfLines < lines.count
     }
 }
 
@@ -422,17 +453,6 @@ private extension NSAttributedString {
             return copy
         }
         return self.copy() as! NSAttributedString
-    }
-
-    func copyWithHighlightedColor() -> NSAttributedString {
-        let alphaComponent = CGFloat(0.5)
-        let baseColor: UIColor = (self.attribute(.foregroundColor, at: 0, effectiveRange: nil) as? UIColor)?.withAlphaComponent(alphaComponent) ??
-            UIColor.black.withAlphaComponent(alphaComponent)
-        let highlightedCopy = NSMutableAttributedString(attributedString: self)
-        let range = NSRange(location: 0, length: highlightedCopy.length)
-        highlightedCopy.removeAttribute(.foregroundColor, range: range)
-        highlightedCopy.addAttribute(.foregroundColor, value: baseColor, range: range)
-        return highlightedCopy
     }
 
     func lines(for width: CGFloat) -> [CTLine] {
