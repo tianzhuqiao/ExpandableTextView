@@ -309,7 +309,7 @@ extension ExpandableTextView {
         font = .systemFont(ofSize: 16)
     }
 
-    private func textReplaceWordWithLink(text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
+    private func textReplaceWordWithLink(text: NSAttributedString, linkName: NSAttributedString?) -> NSAttributedString {
         var lineTextWithLink = text
         (text.string as NSString).enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: [.byWords, .reverse]) { (word, subRange, enclosingRange, stop) -> Void in
             let lineTextWithLastWordRemoved = text.attributedSubstring(from: NSRange(location: 0, length: subRange.location))
@@ -317,10 +317,12 @@ extension ExpandableTextView {
             if let ellipsis = self.ellipsis {
                 lineTextWithAddedLink.append(ellipsis)
                 if let font = self.font {
-                    lineTextWithAddedLink.append(NSAttributedString(string: " ", attributes: [.font: font]))
+                    lineTextWithAddedLink.append(NSAttributedString(string: LinkPosition.space.rawValue, attributes: [.font: font]))
                 }
             }
-            lineTextWithAddedLink.append(linkName)
+            if let link = linkName {
+                lineTextWithAddedLink.append(link)
+            }
             let fits = self.textFitsWidth(lineTextWithAddedLink)
             if fits {
                 lineTextWithLink = lineTextWithAddedLink
@@ -330,7 +332,7 @@ extension ExpandableTextView {
         return lineTextWithLink
     }
 
-    private func textReplaceWithLink(text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
+    private func textReplaceWithLink(text: NSAttributedString, linkName: NSAttributedString?) -> NSAttributedString {
         let lineTextTrimmedNewLines = NSMutableAttributedString()
         lineTextTrimmedNewLines.append(text)
         let nsString = lineTextTrimmedNewLines.string as NSString
@@ -342,10 +344,12 @@ extension ExpandableTextView {
         if let ellipsis = self.ellipsis {
             linkText.append(ellipsis)
             if let font = self.font {
-                linkText.append(NSAttributedString(string: " ", attributes: [.font: font]))
+                linkText.append(NSAttributedString(string: LinkPosition.space.rawValue, attributes: [.font: font]))
             }
         }
-        linkText.append(linkName)
+        if let link = linkName {
+            linkText.append(link)
+        }
 
         let lengthDifference = lineTextTrimmedNewLines.string.composedCount - linkText.string.composedCount
         let truncatedString = lineTextTrimmedNewLines.attributedSubstring(
@@ -409,12 +413,12 @@ extension ExpandableTextView {
                 modifiedLastLineText = text.text(for: lineIndex.line)
             }
 
-            // append the link to last line if necessary
-            if linkPosition != .newline, let lastline = modifiedLastLineText {
+            // append the ellipse and link to last line if necessary
+            if let lastline = modifiedLastLineText {
                 if self.textReplacementType == .word {
-                    modifiedLastLineText = textReplaceWordWithLink(text: lastline, linkName: link)
+                    modifiedLastLineText = textReplaceWordWithLink(text: lastline, linkName: linkPosition != .newline ? link : nil)
                 } else {
-                    modifiedLastLineText = textReplaceWithLink(text: lastline, linkName: link)
+                    modifiedLastLineText = textReplaceWithLink(text: lastline, linkName: linkPosition != .newline ? link : nil)
                 }
             }
 
