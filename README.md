@@ -6,10 +6,17 @@ ExpandableTextView is a UITextView subclass that is able to hide part of the tex
 
 # Installation
 
-[Carthage](https://github.com/Carthage/Carthage)
+### [Carthage](https://github.com/Carthage/Carthage)
 
+Add this to your Cartfile
 
 ```github "tianzhuqiao/ExpandableTextView"```
+
+### [Swift Package Manager](https://swift.org/package-manager/)
+
+* xcode->file->Add Package Dependency
+  1. url: https://github.com/tianzhuqiao/ExpandableTextView
+  2. branch: main
 
 
 # Usage
