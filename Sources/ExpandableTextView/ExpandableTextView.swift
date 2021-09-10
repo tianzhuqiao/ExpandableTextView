@@ -62,6 +62,11 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
         case character
         case word
     }
+    public enum LinkPosition:String {
+        case space = "  "
+        case newline = "\n"
+        case automatic
+    }
     typealias LineIndexTuple = (line: CTLine, index: Int)
 
     /// The delegate of ExpandableTextView
@@ -181,6 +186,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     private var _ellipsis: NSAttributedString?
 
     open var textReplacementType: TextReplacementType = .word
+    open var linkPosition: LinkPosition = .automatic
 
     private var collapsedText: NSAttributedString?
 
@@ -303,11 +309,10 @@ extension ExpandableTextView {
         font = .systemFont(ofSize: 16)
     }
 
-    private func textReplaceWordWithLink(_ lineIndex: LineIndexTuple, text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
-        let lineText = text.text(for: lineIndex.line)
-        var lineTextWithLink = lineText
-        (lineText.string as NSString).enumerateSubstrings(in: NSRange(location: 0, length: lineText.length), options: [.byWords, .reverse]) { (word, subRange, enclosingRange, stop) -> Void in
-            let lineTextWithLastWordRemoved = lineText.attributedSubstring(from: NSRange(location: 0, length: subRange.location))
+    private func textReplaceWordWithLink(text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
+        var lineTextWithLink = text
+        (text.string as NSString).enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: [.byWords, .reverse]) { (word, subRange, enclosingRange, stop) -> Void in
+            let lineTextWithLastWordRemoved = text.attributedSubstring(from: NSRange(location: 0, length: subRange.location))
             let lineTextWithAddedLink = NSMutableAttributedString(attributedString: lineTextWithLastWordRemoved)
             if let ellipsis = self.ellipsis {
                 lineTextWithAddedLink.append(ellipsis)
@@ -325,10 +330,9 @@ extension ExpandableTextView {
         return lineTextWithLink
     }
 
-    private func textReplaceWithLink(_ lineIndex: LineIndexTuple, text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
-        let lineText = text.text(for: lineIndex.line)
+    private func textReplaceWithLink(text: NSAttributedString, linkName: NSAttributedString) -> NSAttributedString {
         let lineTextTrimmedNewLines = NSMutableAttributedString()
-        lineTextTrimmedNewLines.append(lineText)
+        lineTextTrimmedNewLines.append(text)
         let nsString = lineTextTrimmedNewLines.string as NSString
         let range = nsString.rangeOfCharacter(from: CharacterSet.newlines)
         if range.length > 0 {
@@ -351,25 +355,39 @@ extension ExpandableTextView {
         return lineTextWithLink
     }
 
+    private func appendLink(for text: NSAttributedString, link: NSAttributedString?, sep: String) -> NSMutableAttributedString {
+        let expandedText = NSMutableAttributedString()
+        expandedText.append(text)
+        if let link = link, link.length > 0 {
+            // first try to add the les link in the same line
+            expandedText.append(NSAttributedString(string: sep))
+            expandedText.append(NSMutableAttributedString(string: "\(link.string)", attributes: link.attributes(at: 0, effectiveRange: nil)).copyWithAddedFontAttribute(font!))
+        }
+        return expandedText
+    }
+
+    private func appendLink(for text: NSAttributedString?, link: NSAttributedString?) -> NSMutableAttributedString? {
+        guard let text = text else { return nil }
+        if linkPosition == .space || linkPosition == .newline {
+            return appendLink(for: text, link: link, sep: linkPosition.rawValue)
+        } else {
+            var expandedText = NSMutableAttributedString()
+            expandedText.append(text)
+            let rect = expandedText.boundingRect(for: self.bounds.width)
+            expandedText = appendLink(for: text, link: link, sep: LinkPosition.space.rawValue)
+            if abs(rect.height - expandedText.boundingRect(for: self.bounds.width).height) > 1 {
+                expandedText = appendLink(for: text, link: link, sep: LinkPosition.newline.rawValue)
+            }
+            return expandedText
+        }
+    }
+
     private func getExpandedText(for text: NSAttributedString?, link: NSAttributedString?) -> NSAttributedString? {
         guard let text = text else { return nil }
-        var expandedText = NSMutableAttributedString()
-        expandedText.append(text)
-        if let link = link, link.length > 0 && textWillBeTruncated(expandedText) {
-            // first try to add the les link in the same line
-            let rect = expandedText.boundingRect(for: self.bounds.width)
-            expandedText.append(NSAttributedString(string: "  "))
-            expandedText.append(NSMutableAttributedString(string: "\(link.string)", attributes: link.attributes(at: 0, effectiveRange: nil)).copyWithAddedFontAttribute(font!))
-            if abs(rect.height - expandedText.boundingRect(for: self.bounds.width).height) > 1 {
-                // if the less linke crosses multiple lines, then put it in a new line
-                expandedText = NSMutableAttributedString()
-                expandedText.append(text)
-                expandedText.append(NSAttributedString(string: "\n"))
-                expandedText.append(NSMutableAttributedString(string: "\(link.string)", attributes: link.attributes(at: 0, effectiveRange: nil)).copyWithAddedFontAttribute(font!))
-            }
+        if textWillBeTruncated(text) {
+            return appendLink(for: text, link: link)
         }
-
-        return expandedText
+        return text
     }
 
     private func getCollapsedText(for text: NSAttributedString?, link: NSAttributedString) -> NSAttributedString? {
@@ -380,24 +398,36 @@ extension ExpandableTextView {
             var lineIndex: LineIndexTuple?
             var modifiedLastLineText: NSAttributedString?
 
+            // get the index of last line
             if self.textReplacementType == .word {
                 lineIndex = findLineWithWords(lastLine: lastLineRef, text: text, lines: lines)
-                if let lineIndex = lineIndex {
-                    modifiedLastLineText = textReplaceWordWithLink(lineIndex, text: text, linkName: link)
-                }
             } else {
                 lineIndex = (lastLineRef, numberOfLines - 1)
-                if let lineIndex = lineIndex {
-                    modifiedLastLineText = textReplaceWithLink(lineIndex, text: text, linkName: link)
+            }
+            // get the last line
+            if let lineIndex = lineIndex {
+                modifiedLastLineText = text.text(for: lineIndex.line)
+            }
+
+            // append the link to last line if necessary
+            if linkPosition != .newline, let lastline = modifiedLastLineText {
+                if self.textReplacementType == .word {
+                    modifiedLastLineText = textReplaceWordWithLink(text: lastline, linkName: link)
+                } else {
+                    modifiedLastLineText = textReplaceWithLink(text: lastline, linkName: link)
                 }
             }
 
             if let lineIndex = lineIndex, let modifiedLastLineText = modifiedLastLineText {
-                let collapsedLines = NSMutableAttributedString()
+                var collapsedLines: NSMutableAttributedString? = NSMutableAttributedString()
                 for index in 0..<lineIndex.index {
-                    collapsedLines.append(text.text(for:lines[index]))
+                    collapsedLines?.append(text.text(for:lines[index]))
                 }
-                collapsedLines.append(modifiedLastLineText)
+                collapsedLines?.append(modifiedLastLineText)
+                // append the link if it hasn't be there yet
+                if linkPosition == .newline {
+                    collapsedLines = appendLink(for: collapsedLines, link: link)
+                }
 
                 return collapsedLines
             } else {
