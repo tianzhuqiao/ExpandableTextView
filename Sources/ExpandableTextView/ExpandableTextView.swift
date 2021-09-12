@@ -81,20 +81,29 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
 
     open override var font: UIFont? {
         didSet {
-            if let font = font {
-                _collapsedAttributedLink = _collapsedAttributedLink.copyWithAddedFontAttribute(font)
-                _expandedAttributedLink = _expandedAttributedLink?.copyWithAddedFontAttribute(font)
-                _ellipsis = _ellipsis?.copyWithAddedFontAttribute(font)
-            }
+            _collapsedAttributedLink = copyWithAddedAttribute(_collapsedAttributedLink, forced: true)
+            _expandedAttributedLink = copyWithAddedAttribute(_expandedAttributedLink, forced: true)
+            _ellipsis = copyWithAddedAttribute(_ellipsis, forced: true)
+        }
+    }
+    open override var textColor: UIColor? {
+        didSet {
+            _collapsedAttributedLink = copyWithAddedAttribute(_collapsedAttributedLink, forced: true)
+            _expandedAttributedLink = copyWithAddedAttribute(_expandedAttributedLink, forced: true)
+            _ellipsis = copyWithAddedAttribute(_ellipsis, forced: true)
+        }
+    }
+    open override var textAlignment: NSTextAlignment {
+        didSet {
+            collapsedText = copyWithParagraphAttribute(collapsedText, forced: true)
+            expandedText = copyWithParagraphAttribute(expandedText, forced: true)
         }
     }
 
     open var lessText: String? = "Less" {
         didSet {
             if let lessText = lessText, !lessText.isEmpty {
-                let less = NSMutableAttributedString(string: lessText)
-                expandedAttributedLink = less
-
+                expandedAttributedLink = NSMutableAttributedString(string: lessText)
             } else {
                 expandedAttributedLink = nil
             }
@@ -107,8 +116,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
             if moreStr.isEmpty {
                 moreStr = "More"
             }
-            let more = NSMutableAttributedString(string: moreStr)
-            collapsedAttributedLink = more
+            collapsedAttributedLink = NSMutableAttributedString(string: moreStr)
         }
     }
 
@@ -116,7 +124,6 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
         didSet {
             if let ellipsisText = ellipsisText, !ellipsisText.isEmpty {
                 ellipsis = NSMutableAttributedString(string: ellipsisText)
-
             } else {
                 ellipsis = nil
             }
@@ -131,10 +138,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
             let range = NSRange(location: 0, length: more.length)
             more.removeAttribute(.link, range: range)
             more.addAttribute(.link, value: "etv://more", range: range)
-            _collapsedAttributedLink = more
-            if let font = font {
-                _collapsedAttributedLink = _collapsedAttributedLink.copyWithAddedFontAttribute(font)
-            }
+            _collapsedAttributedLink = copyWithAddedAttribute(more)
         }
         get {
             return _collapsedAttributedLink
@@ -152,10 +156,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
                 let range = NSRange(location: 0, length: less.length)
                 less.removeAttribute(.link, range: range)
                 less.addAttribute(.link, value: "etv://less", range: range)
-                _expandedAttributedLink = less
-                if let font = font {
-                    _expandedAttributedLink = _expandedAttributedLink?.copyWithAddedFontAttribute(font)
-                }
+                _expandedAttributedLink = copyWithAddedAttribute(less)
             } else {
                 _expandedAttributedLink = nil
             }
@@ -171,10 +172,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     open var ellipsis: NSAttributedString? {
         set(value) {
             if let value = value {
-                _ellipsis = value
-                if let font = font {
-                    _ellipsis = _ellipsis?.copyWithAddedFontAttribute(font)
-                }
+                _ellipsis = copyWithAddedAttribute(value)
             } else {
                 _ellipsis = nil
             }
@@ -183,7 +181,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
             return _ellipsis
         }
     }
-    private var _ellipsis: NSAttributedString?
+    private var _ellipsis: NSMutableAttributedString?
 
     open var textReplacementType: TextReplacementType = .word
     open var linkPosition: LinkPosition = .automatic
@@ -223,14 +221,10 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     }
 
     private func updateText() {
-        var attributedText = fullAttributedText
-        if let font = self.font {
-             attributedText = fullAttributedText?.copyWithAddedFontAttribute(font).copyWithParagraphAttribute(font)
-        }
-        if let attributedText = attributedText, attributedText.length > 0 {
-            self.collapsedText = getCollapsedText(for: attributedText, link: self.collapsedAttributedLink)
-            self.expandedText = getExpandedText(for: attributedText, link: self.expandedAttributedLink)
-            super.attributedText = (self.collapsed) ? self.collapsedText : self.expandedText
+        if let attributedText = fullAttributedText, attributedText.length > 0 {
+            collapsedText = copyWithParagraphAttribute(getCollapsedText(for: attributedText, link: collapsedAttributedLink))
+            expandedText = copyWithParagraphAttribute(getExpandedText(for: attributedText, link: expandedAttributedLink))
+            super.attributedText = (collapsed) ? collapsedText : expandedText
         } else {
             self.expandedText = nil
             self.collapsedText = nil
@@ -248,7 +242,7 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
     private var fullAttributedText: NSAttributedString?
     open override var attributedText: NSAttributedString? {
         set(attributedText) {
-            fullAttributedText = attributedText
+            fullAttributedText = copyWithAddedAttribute(attributedText)
             updateText()
         }
         get {
@@ -311,7 +305,7 @@ extension ExpandableTextView {
 
     private func textReplaceWordWithLink(text: NSAttributedString, linkName: NSAttributedString?) -> NSAttributedString {
         var lineTextWithLink = text
-        (text.string as NSString).enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: [.byWords, .reverse]) { (word, subRange, enclosingRange, stop) -> Void in
+        (text.string as NSString).enumerateSubstrings(in: NSRange(location: 0, length: text.length), options: [.byWords, .reverse]) { [self] (word, subRange, enclosingRange, stop) -> Void in
             let lineTextWithLastWordRemoved = text.attributedSubstring(from: NSRange(location: 0, length: subRange.location))
             let lineTextWithAddedLink = NSMutableAttributedString(attributedString: lineTextWithLastWordRemoved)
             if let ellipsis = self.ellipsis {
@@ -363,9 +357,8 @@ extension ExpandableTextView {
         let expandedText = NSMutableAttributedString()
         expandedText.append(text)
         if let link = link, link.length > 0 {
-            // first try to add the les link in the same line
             expandedText.append(NSAttributedString(string: sep))
-            expandedText.append(NSMutableAttributedString(string: "\(link.string)", attributes: link.attributes(at: 0, effectiveRange: nil)).copyWithAddedFontAttribute(font!))
+            expandedText.append(link)
         }
         return expandedText
     }
@@ -378,8 +371,10 @@ extension ExpandableTextView {
             var expandedText = NSMutableAttributedString()
             expandedText.append(text)
             let rect = expandedText.boundingRect(for: self.bounds.width)
+            // first try to add the less link in the same line
             expandedText = appendLink(for: text, link: link, sep: LinkPosition.space.rawValue)
             if abs(rect.height - expandedText.boundingRect(for: self.bounds.width).height) > 1 {
+                // if the added link increase the height, add the link to new line
                 expandedText = appendLink(for: text, link: link, sep: LinkPosition.newline.rawValue)
             }
             return expandedText
@@ -413,7 +408,7 @@ extension ExpandableTextView {
                 modifiedLastLineText = text.text(for: lineIndex.line)
             }
 
-            // append the ellipse and link to last line if necessary
+            // append the ellipsis and link to last line if necessary
             if let lastline = modifiedLastLineText {
                 if self.textReplacementType == .word {
                     modifiedLastLineText = textReplaceWordWithLink(text: lastline, linkName: linkPosition != .newline ? link : nil)
@@ -455,38 +450,59 @@ extension ExpandableTextView {
         let lines = text.lines(for: frame.size.width)
         return numberOfLines > 0 && numberOfLines < lines.count
     }
+
+    func copyWithAddedAttribute(_ str: NSAttributedString?, forced:Bool = false) -> NSMutableAttributedString? {
+        guard let str = str else {return nil}
+        let copy = NSMutableAttributedString(attributedString: str)
+        let range = NSRange(location: 0, length: copy.length)
+        if forced {
+            if copy.hasAttribute(key: .font) {
+                copy.removeAttribute(.font, range: range)
+            }
+            if copy.hasAttribute(key: .foregroundColor) {
+                copy.removeAttribute(.foregroundColor, range: range)
+            }
+        }
+        if !copy.hasAttribute(key: .font), let font = font {
+            copy.addAttribute(.font, value: font, range: range)
+        }
+        if !copy.hasAttribute(key: .foregroundColor), let color = textColor {
+            copy.addAttribute(.foregroundColor, value: color, range: range)
+        }
+        return copy
+    }
+
+    func copyWithParagraphAttribute(_ str: NSAttributedString?, forced:Bool = false) -> NSMutableAttributedString? {
+        guard let str = str else { return nil }
+        let copy = NSMutableAttributedString(attributedString: str)
+        if let font = font {
+            let range = NSRange(location: 0, length: copy.length)
+            if forced {
+                for att in [NSAttributedString.Key.paragraphStyle, NSAttributedString.Key.baselineOffset] {
+                    if copy.hasAttribute(key: att) {
+                        copy.removeAttribute(.paragraphStyle, range: range)
+                    }
+                }
+            }
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.lineHeightMultiple = 1.05
+            paragraphStyle.alignment = textAlignment
+            paragraphStyle.lineSpacing = 0.0
+            paragraphStyle.minimumLineHeight = font.lineHeight
+            paragraphStyle.maximumLineHeight = font.lineHeight
+
+            copy.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
+            copy.addAttribute(.baselineOffset, value: font.pointSize * 0.08, range: range)
+        }
+        return copy
+    }
 }
 
 // MARK: Convenience Methods
 private extension NSAttributedString {
-    func hasFontAttribute() -> Bool {
+    func hasAttribute(key: NSAttributedString.Key) -> Bool {
         guard !self.string.isEmpty else { return false }
-        let font = self.attribute(.font, at: 0, effectiveRange: nil) as? UIFont
-        return font != nil
-    }
-
-    func copyWithParagraphAttribute(_ font: UIFont) -> NSAttributedString {
-        let paragraphStyle = NSMutableParagraphStyle()
-        paragraphStyle.lineHeightMultiple = 1.05
-        paragraphStyle.alignment = .left
-        paragraphStyle.lineSpacing = 0.0
-        paragraphStyle.minimumLineHeight = font.lineHeight
-        paragraphStyle.maximumLineHeight = font.lineHeight
-
-        let copy = NSMutableAttributedString(attributedString: self)
-        let range = NSRange(location: 0, length: copy.length)
-        copy.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
-        copy.addAttribute(.baselineOffset, value: font.pointSize * 0.08, range: range)
-        return copy
-    }
-
-    func copyWithAddedFontAttribute(_ font: UIFont) -> NSAttributedString {
-        if !hasFontAttribute() {
-            let copy = NSMutableAttributedString(attributedString: self)
-            copy.addAttribute(.font, value: font, range: NSRange(location: 0, length: copy.length))
-            return copy
-        }
-        return self.copy() as! NSAttributedString
+        return self.attribute(key, at: 0, effectiveRange: nil) != nil
     }
 
     func lines(for width: CGFloat) -> [CTLine] {
