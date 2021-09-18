@@ -38,6 +38,8 @@ lazy var notesTextView : ExpandableTextView = {
         v.lessText = "Read Less"
         v.delegateExppanable = self
         v.numberOfLines = 3
+        v.linkPosition = .automatic // the More/Less button position: .space, .newline or .automatic
+        v.textAlignment = .left
         return v
     }()
 ```
