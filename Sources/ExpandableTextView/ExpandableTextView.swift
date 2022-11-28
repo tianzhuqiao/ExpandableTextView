@@ -236,6 +236,11 @@ open class ExpandableTextView: UITextView, UITextViewDelegate {
         super.layoutSubviews()
         // update the text based on the textview width
         updateText()
+        if self.collapsed {
+            delegateExppanable?.didCollapseTextView(self)
+        } else {
+            delegateExppanable?.didExpandTextView(self)
+        }
     }
     open private(set) var expandedText: NSAttributedString?
 
